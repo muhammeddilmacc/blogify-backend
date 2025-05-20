@@ -13,10 +13,13 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 import { inject, injectable } from 'inversify';
 import { PostService } from '../services/PostService.js';
 import { BaseController } from '../abstracts/BaseController.js';
+import { CloudinaryService } from '../services/CloudinaryService.js';
+import { TYPES } from '../utils/types.js';
 let PostController = class PostController extends BaseController {
-    constructor(postService) {
+    constructor(postService, cloudinaryService) {
         super();
         this.postService = postService;
+        this.cloudinaryService = cloudinaryService;
     }
     async uploadImage(req, res) {
         try {
@@ -29,12 +32,13 @@ let PostController = class PostController extends BaseController {
                 this.badRequest(res, 'Lütfen bir resim yükleyin.');
                 return;
             }
-            const baseUrl = process.env.BASE_URL || `http://localhost:${process.env.PORT || 3001}`;
-            const imageUrl = `${process.env.BASE_URL}/uploads/${req.file.filename}`;
-            console.log('UPLOAD - Image URL created:', imageUrl);
+            // Cloudinary'ye yükle
+            const { url, publicId } = await this.cloudinaryService.uploadImage(req.file);
+            console.log('UPLOAD - Image uploaded to Cloudinary:', { url, publicId });
             const response = {
-                url: imageUrl,
+                url,
                 alt: req.file.originalname,
+                publicId
             };
             console.log('UPLOAD - Sending response:', response);
             this.success(res, response);
@@ -72,6 +76,28 @@ let PostController = class PostController extends BaseController {
                     ? status
                     : undefined,
                 search: search,
+            });
+            this.success(res, result);
+        }
+        catch (error) {
+            this.handleError(error, res);
+        }
+    }
+    async getPublishedPosts(req, res) {
+        try {
+            const { page = 1, limit = 12, category, search, sortBy } = req.query;
+            const validCategories = ['writing', 'poem', 'article'];
+            const validSortOptions = ['date-desc', 'date-asc', 'views-desc', 'views-asc'];
+            const result = await this.postService.getPublishedPosts({
+                page: Number(page),
+                limit: Number(limit),
+                category: category && validCategories.includes(category)
+                    ? category
+                    : undefined,
+                search: search,
+                sortBy: sortBy && validSortOptions.includes(sortBy)
+                    ? sortBy
+                    : 'date-desc'
             });
             this.success(res, result);
         }
@@ -175,10 +201,50 @@ let PostController = class PostController extends BaseController {
             this.handleError(error, res);
         }
     }
+    async getMostSharedPosts(req, res) {
+        try {
+            const result = await this.postService.getMostSharedPosts();
+            this.success(res, result);
+        }
+        catch (error) {
+            this.handleError(error, res);
+        }
+    }
+    async incrementShareCount(req, res) {
+        try {
+            const { id } = req.params;
+            await this.postService.incrementShareCount(id);
+            this.success(res, { message: 'Paylaşım sayısı güncellendi' });
+        }
+        catch (error) {
+            this.handleError(error, res);
+        }
+    }
+    async incrementViewCount(req, res) {
+        try {
+            const { id } = req.params;
+            await this.postService.incrementViewCount(id);
+            this.success(res, { message: 'Görüntülenme sayısı güncellendi' });
+        }
+        catch (error) {
+            this.handleError(error, res);
+        }
+    }
+    async getMostVisitedPost(req, res) {
+        try {
+            const post = await this.postService.getMostVisitedPost();
+            this.success(res, post);
+        }
+        catch (error) {
+            this.handleError(error, res);
+        }
+    }
 };
 PostController = __decorate([
     injectable(),
     __param(0, inject(PostService)),
-    __metadata("design:paramtypes", [PostService])
+    __param(1, inject(TYPES.CloudinaryService)),
+    __metadata("design:paramtypes", [PostService,
+        CloudinaryService])
 ], PostController);
 export { PostController };

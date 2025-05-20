@@ -39,20 +39,29 @@ let AuthController = class AuthController {
     async loginUser(req, res) {
         const { id, token } = req.body;
         try {
+            console.log('Login isteği alındı:', { id });
             const user = await this.authService.loginUser({ id, token });
-            res
-                .cookie('token', token, {
+            const cookieOptions = {
                 httpOnly: true,
-                secure: false,
+                secure: true,
                 sameSite: 'none',
                 path: '/',
-                maxAge: 7 * 24 * 60 * 60 * 1000,
-                domain: process.env.NODE_ENV === 'production' ? '.onrender.com' : 'localhost'
-            })
-                .status(200)
-                .json({
+                maxAge: 24 * 60 * 60 * 1000, // 1 day
+                domain: process.env.NODE_ENV === 'production' ? 'google.com' : 'localhost'
+            };
+            console.log('Cookie ayarları:', cookieOptions);
+            // Token cookie'sini ayarla
+            res.cookie('token', token, cookieOptions);
+            // Session cookie'sini ayarla
+            res.cookie('session', 'true', cookieOptions);
+            // CORS headers'ı güçlendir
+            res.header('Access-Control-Allow-Credentials', 'true');
+            res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+            res.header('Access-Control-Expose-Headers', 'Set-Cookie');
+            console.log('Cookies set successfully');
+            res.status(200).json({
                 user,
-                token
+                message: 'Login successful'
             });
         }
         catch (error) {
@@ -62,28 +71,38 @@ let AuthController = class AuthController {
     }
     async logoutUser(req, res) {
         try {
-            res.cookie('token', '', {
+            // Cookie options
+            const cookieOptions = {
                 httpOnly: true,
-                secure: false,
+                secure: true,
                 sameSite: 'none',
                 path: '/',
-                expires: new Date(0),
-                domain: process.env.NODE_ENV === 'production' ? '.onrender.com' : 'localhost'
+                expires: new Date(0)
+            };
+            // Tüm cookie'leri temizle
+            const cookiesToClear = ['token', 'session', 'firebase-token'];
+            cookiesToClear.forEach(cookieName => {
+                res.clearCookie(cookieName, cookieOptions);
             });
-            res.status(200).json({ message: 'User logged out successfully' });
+            // Header'ları temizle
+            res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+            res.setHeader('Clear-Site-Data', '"cache", "cookies", "storage"');
+            res.status(200).json({
+                message: 'User logged out successfully',
+                clearedCookies: cookiesToClear
+            });
         }
         catch (error) {
-            console.error('Logout error:', error);
-            res.status(500).json({ error: 'Logout failed' });
+            res.status(500).json({
+                error: 'Logout failed',
+                details: error?.message || 'Unknown error'
+            });
         }
     }
     async getUserRole(req, res) {
         const { uid, token } = req.body;
-        console.log('uid: ', uid);
         try {
             const user = await this.userService.getUserRole(token);
-            console.log('user: ', user);
-            console.log('user.email: ', user?.email);
             res.status(200).json({ user: user });
         }
         catch (error) {

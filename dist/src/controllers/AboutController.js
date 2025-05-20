@@ -13,11 +13,13 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 import { injectable, inject } from 'inversify';
 import { AboutService } from '../services/AboutService.js';
 import { BaseController } from '../abstracts/BaseController.js';
-import { uploadFile } from '../middlewares/uploadMiddleware.js';
+import { CloudinaryService } from '../services/CloudinaryService.js';
+import { TYPES } from '../utils/types.js';
 let AboutController = class AboutController extends BaseController {
-    constructor(aboutService) {
+    constructor(aboutService, cloudinaryService) {
         super();
         this.aboutService = aboutService;
+        this.cloudinaryService = cloudinaryService;
     }
     async getAbout(req, res) {
         try {
@@ -32,13 +34,17 @@ let AboutController = class AboutController extends BaseController {
         try {
             const file = req.file;
             let imageUrl = '';
+            let imagePublicId = '';
             if (file) {
-                imageUrl = await uploadFile(file);
+                const uploadResult = await this.cloudinaryService.uploadImage(file);
+                imageUrl = uploadResult.url;
+                imagePublicId = uploadResult.publicId;
             }
             const aboutData = {
                 name: req.body.name,
                 description: req.body.description,
-                imageUrl: imageUrl || req.body.imageUrl
+                imageUrl: imageUrl || req.body.imageUrl,
+                imagePublicId: imagePublicId || req.body.imagePublicId
             };
             const updatedAbout = await this.aboutService.updateAbout(aboutData);
             this.success(res, updatedAbout);
@@ -51,6 +57,8 @@ let AboutController = class AboutController extends BaseController {
 AboutController = __decorate([
     injectable(),
     __param(0, inject(AboutService)),
-    __metadata("design:paramtypes", [AboutService])
+    __param(1, inject(TYPES.CloudinaryService)),
+    __metadata("design:paramtypes", [AboutService,
+        CloudinaryService])
 ], AboutController);
 export { AboutController };

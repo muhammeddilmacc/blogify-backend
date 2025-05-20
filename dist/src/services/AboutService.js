@@ -12,10 +12,11 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 };
 import { injectable, inject } from 'inversify';
 import { db } from '../utils/config.js';
-import { FileService } from './FileService.js';
+import { CloudinaryService } from './CloudinaryService.js';
+import { TYPES } from '../utils/types.js';
 let AboutService = class AboutService {
-    constructor(fileService) {
-        this.fileService = fileService;
+    constructor(cloudinaryService) {
+        this.cloudinaryService = cloudinaryService;
         this.collection = 'about';
     }
     async getAbout() {
@@ -50,9 +51,10 @@ let AboutService = class AboutService {
                 const doc = snapshot.docs[0];
                 const currentAbout = doc.data();
                 // Eğer yeni bir resim yüklendiyse ve eski resimden farklıysa, eski resmi sil
-                if (about.imageUrl && currentAbout.imageUrl && about.imageUrl !== currentAbout.imageUrl) {
-                    const oldFilename = this.fileService.extractFilenameFromUrl(currentAbout.imageUrl);
-                    await this.fileService.deleteFile(oldFilename);
+                if (about.imageUrl && currentAbout.imageUrl &&
+                    about.imageUrl !== currentAbout.imageUrl &&
+                    currentAbout.imagePublicId) {
+                    await this.cloudinaryService.deleteImage(currentAbout.imagePublicId);
                 }
                 const updatedAbout = {
                     ...about,
@@ -70,7 +72,7 @@ let AboutService = class AboutService {
 };
 AboutService = __decorate([
     injectable(),
-    __param(0, inject(FileService)),
-    __metadata("design:paramtypes", [FileService])
+    __param(0, inject(TYPES.CloudinaryService)),
+    __metadata("design:paramtypes", [CloudinaryService])
 ], AboutService);
 export { AboutService };

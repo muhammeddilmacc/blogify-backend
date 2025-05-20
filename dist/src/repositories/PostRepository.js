@@ -13,19 +13,43 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 import { BaseFirestoreRepository } from '../abstracts/BaseFirestoreRepository.js';
 import { Post } from '../models/Post.js';
 import { inject, injectable } from 'inversify';
-import { Firestore } from 'firebase-admin/firestore';
+import { Firestore, FieldValue } from 'firebase-admin/firestore';
 import { TYPES } from '../utils/types.js';
 let PostRepository = class PostRepository extends BaseFirestoreRepository {
     constructor(db, collectionName) {
         super(collectionName, db);
         this.collection = db.collection(collectionName);
     }
+    async create(data) {
+        const docRef = this.collection.doc();
+        const timestamp = FieldValue.serverTimestamp();
+        const documentData = {
+            ...data,
+            id: docRef.id,
+            views: 0,
+            shareCount: 0,
+            totalViewDuration: 0,
+            searchableTitle: data.title.toLowerCase(),
+            slug: new Post(data.title, data.content, data.category, data.excerpt, data.author).createSlug(data.title),
+            createdAt: timestamp,
+            updatedAt: timestamp,
+        };
+        await docRef.set(documentData);
+        return documentData;
+    }
     mapDocToPost(doc) {
         const data = doc.data();
         if (!data)
             throw new Error('Document data is null');
-        const post = new Post(data.title, data.content, data.category, data.excerpt, data.author, data.status, data.image);
+        const post = new Post(data.title, data.content, data.category, data.excerpt, data.author, data.status, data.image, data.createdAt?.toDate()?.toISOString() || new Date().toISOString());
         post.id = doc.id;
+        post.views = data.views || 0;
+        post.shareCount = data.shareCount || 0;
+        post.totalViewDuration = data.totalViewDuration || 0;
+        post.searchableTitle = data.searchableTitle || data.title.toLowerCase();
+        post.slug = data.slug || post.createSlug(data.title);
+        post.lastViewedAt = data.lastViewedAt?.toDate() || undefined;
+        post.date = data.date || data.createdAt?.toDate()?.toISOString() || new Date().toISOString();
         return post;
     }
     async findAll(limit = 10, startAfterId) {
@@ -45,29 +69,45 @@ let PostRepository = class PostRepository extends BaseFirestoreRepository {
             lastDoc: snapshot.docs[snapshot.docs.length - 1]
         };
     }
-    async findAllWithFilters(limit = 10, skip = 0, filters = {}, search) {
-        let baseQuery = this.collection.orderBy('createdAt', 'desc');
+    async findAllWithFilters(limit = 10, skip = 0, filters = {}, search, sortBy = 'date-desc') {
+        let baseQuery = this.collection;
         if (filters.category) {
             baseQuery = baseQuery.where('category', '==', filters.category);
         }
         if (filters.status) {
             baseQuery = baseQuery.where('status', '==', filters.status);
         }
-        if (search) {
-            baseQuery = baseQuery
-                .orderBy('title')
-                .startAt(search)
-                .endAt(search + '\uf8ff');
+        switch (sortBy) {
+            case 'date-desc':
+                baseQuery = baseQuery.orderBy('createdAt', 'desc');
+                break;
+            case 'date-asc':
+                baseQuery = baseQuery.orderBy('createdAt', 'asc');
+                break;
+            case 'views-desc':
+                baseQuery = baseQuery.orderBy('views', 'desc').orderBy('createdAt', 'desc');
+                break;
+            case 'views-asc':
+                baseQuery = baseQuery.orderBy('views', 'asc').orderBy('createdAt', 'desc');
+                break;
+            case 'shareCount-desc':
+                baseQuery = baseQuery.orderBy('shareCount', 'desc').orderBy('createdAt', 'desc');
+                break;
+            case 'shareCount-asc':
+                baseQuery = baseQuery.orderBy('shareCount', 'asc').orderBy('createdAt', 'desc');
+                break;
+            default:
+                baseQuery = baseQuery.orderBy('createdAt', 'desc');
         }
-        if (skip > 0) {
-            const snapshot = await this.collection
-                .orderBy('createdAt', 'desc')
-                .limit(skip)
-                .get();
-            const lastDoc = snapshot.docs[snapshot.docs.length - 1];
-            if (lastDoc) {
-                baseQuery = baseQuery.startAfter(lastDoc);
-            }
+        if (search) {
+            const searchLower = search.toLowerCase();
+            baseQuery = baseQuery.where('searchableTitle', '>=', searchLower)
+                .where('searchableTitle', '<=', searchLower + '\uf8ff');
+        }
+        const totalQuery = baseQuery.get();
+        const totalDocs = (await totalQuery).docs;
+        if (skip > 0 && skip < totalDocs.length) {
+            baseQuery = baseQuery.startAfter(totalDocs[skip - 1]);
         }
         const finalQuery = baseQuery.limit(limit);
         const snapshot = await finalQuery.get();
@@ -86,10 +126,9 @@ let PostRepository = class PostRepository extends BaseFirestoreRepository {
             countQuery = countQuery.where('status', '==', filters.status);
         }
         if (search) {
-            countQuery = countQuery
-                .orderBy('title')
-                .startAt(search)
-                .endAt(search + '\uf8ff');
+            const searchLower = search.toLowerCase();
+            countQuery = countQuery.where('searchableTitle', '>=', searchLower)
+                .where('searchableTitle', '<=', searchLower + '\uf8ff');
         }
         const snapshot = await countQuery.count().get();
         return snapshot.data().count;
@@ -149,6 +188,15 @@ let PostRepository = class PostRepository extends BaseFirestoreRepository {
             .endAt(searchTerm + '\uf8ff')
             .get();
         return snapshot.docs.map(this.mapDocToPost);
+    }
+    async getMostVisitedPost() {
+        const snapshot = await this.collection
+            .orderBy('views', 'desc')
+            .limit(1)
+            .get();
+        if (snapshot.empty)
+            return null;
+        return this.mapDocToPost(snapshot.docs[0]);
     }
 };
 PostRepository = __decorate([

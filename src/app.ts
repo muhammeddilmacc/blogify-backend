@@ -30,12 +30,9 @@ const corsOptions = {
   origin: function (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) {
     
     const allowedOrigins = [
-      'https://alicendek.vercel.app',
-      'https://alicendek-git-main-muhammeddilmacc.vercel.app',
-      'https://alicendek-muhammeddilmacc.vercel.app',
+      // productions url backend and frontend
       'http://localhost:3000',
       'http://localhost:3001',
-      'https://alicendek.onrender.com'
     ];
     
     // origin undefined olabilir (örn: Postman istekleri)
@@ -88,8 +85,8 @@ app.get('/ping', (req, res) => {
 // Ping in every 5 minutes
 setInterval(async () => {
   try {
-    console.log('Ping gönderiliyor...');
-    await fetch('https://alicendek.onrender.com/api/posts'); // Firebase veya Render URL'nizi buraya ekleyin
+    //console.log('Ping gönderiliyor...');
+    //await fetch('backend ping url'); 
   } catch (error) {
     console.error('Ping gönderilemedi:', error);
   }

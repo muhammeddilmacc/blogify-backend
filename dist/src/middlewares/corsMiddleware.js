@@ -1,18 +1,19 @@
 export const corsMiddleware = (req, res, next) => {
     const allowedOrigins = [
-        'https://alicendek-lkov.onrender.com',
+        // 'production urls backend and frontend',
         'http://localhost:3000',
         'http://localhost:3001',
     ];
     const origin = req.headers.origin;
     if (origin && allowedOrigins.includes(origin)) {
-        res.header('Access-Control-Allow-Origin', origin);
+        res.setHeader('Access-Control-Allow-Origin', origin);
     }
-    res.header('Access-Control-Allow-Credentials', 'true');
-    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
-    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    res.setHeader('Access-Control-Allow-Methods', 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, Access-Control-Allow-Origin, Access-Control-Allow-Credentials, Access-Control-Allow-Methods');
+    // Preflight isteğine yanıt ver
     if (req.method === 'OPTIONS') {
-        res.status(200).json({});
+        res.status(200).end();
         return;
     }
     next();

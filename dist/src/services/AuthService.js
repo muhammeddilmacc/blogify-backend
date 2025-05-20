@@ -96,6 +96,19 @@ let AuthService = class AuthService {
             throw error;
         }
     }
+    async verifyToken(token) {
+        try {
+            const user = await this.firebaseAuthService.verifyIdToken(token);
+            if (!user) {
+                throw new Error('Token verification failed');
+            }
+            return user;
+        }
+        catch (error) {
+            console.error('Token verification error:', error);
+            throw error;
+        }
+    }
 };
 AuthService = __decorate([
     injectable(),

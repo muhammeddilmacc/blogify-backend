@@ -6,8 +6,7 @@ export const corsMiddleware = (
   next: NextFunction,
 ): void => {
   const allowedOrigins = [
-    'https://alicendek.vercel.app',
-    'https://alicendek.onrender.com',
+    // 'production urls backend and frontend',
     'http://localhost:3000',
     'http://localhost:3001',
   ];

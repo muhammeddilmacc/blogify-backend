@@ -45,7 +45,7 @@ export class AuthController {
         sameSite: 'none' as const,
         path: '/',
         maxAge: 24 * 60 * 60 * 1000, // 1 day
-        domain: process.env.NODE_ENV === 'production' ? 'alicendek.onrender.com' : 'localhost'
+        domain: process.env.NODE_ENV === 'production' ? 'google.com' : 'localhost'
       };
 
       console.log('Cookie ayarları:', cookieOptions);
@@ -58,7 +58,7 @@ export class AuthController {
 
       // CORS headers'ı güçlendir
       res.header('Access-Control-Allow-Credentials', 'true');
-      res.header('Access-Control-Allow-Origin', req.headers.origin || 'https://alicendek.vercel.app');
+      res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
       res.header('Access-Control-Expose-Headers', 'Set-Cookie');
 
       console.log('Cookies set successfully');

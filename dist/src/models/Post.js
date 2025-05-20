@@ -7,10 +7,14 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
-import { IsString, IsNotEmpty, IsEnum, IsObject } from 'class-validator';
+import { IsString, IsNotEmpty, IsEnum, IsObject, IsNumber, IsDate, IsOptional } from 'class-validator';
 export class Post {
-    constructor(title, content, category, excerpt, author, status = 'draft', image = { url: '', alt: '' }) {
+    constructor(title, content, category, excerpt, author, status = 'draft', image = { url: '', alt: '' }, date) {
+        this.views = 0;
+        this.shareCount = 0;
+        this.totalViewDuration = 0; // saniye cinsinden
         this.title = title;
+        this.searchableTitle = title.toLowerCase();
         this.content = content;
         this.category = category;
         this.excerpt = excerpt;
@@ -18,7 +22,10 @@ export class Post {
         this.status = status;
         this.author = author;
         this.slug = this.createSlug(title);
-        this.date = new Date().toISOString();
+        this.date = date || new Date().toISOString();
+        this.views = 0;
+        this.shareCount = 0;
+        this.totalViewDuration = 0;
     }
     createSlug(title) {
         return title
@@ -32,6 +39,11 @@ export class Post {
             .replace(/[^a-z0-9]+/g, '-')
             .replace(/^-+|-+$/g, '');
     }
+    updateTitle(newTitle) {
+        this.title = newTitle;
+        this.searchableTitle = newTitle.toLowerCase();
+        this.slug = this.createSlug(newTitle);
+    }
 }
 __decorate([
     IsString(),
@@ -43,6 +55,28 @@ __decorate([
     IsNotEmpty(),
     __metadata("design:type", String)
 ], Post.prototype, "title", void 0);
+__decorate([
+    IsString(),
+    IsNotEmpty(),
+    __metadata("design:type", String)
+], Post.prototype, "searchableTitle", void 0);
+__decorate([
+    IsNumber(),
+    __metadata("design:type", Number)
+], Post.prototype, "views", void 0);
+__decorate([
+    IsNumber(),
+    __metadata("design:type", Number)
+], Post.prototype, "shareCount", void 0);
+__decorate([
+    IsNumber(),
+    __metadata("design:type", Number)
+], Post.prototype, "totalViewDuration", void 0);
+__decorate([
+    IsDate(),
+    IsOptional(),
+    __metadata("design:type", Date)
+], Post.prototype, "lastViewedAt", void 0);
 __decorate([
     IsString(),
     IsNotEmpty(),

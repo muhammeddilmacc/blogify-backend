@@ -11,13 +11,15 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
 import { inject, injectable } from 'inversify';
-import { PostRepository } from '../repositories/PostRepository.js';
 import { Post } from '../models/Post.js';
 import { FileService } from './FileService.js';
+import { TYPES } from '../utils/types.js';
+import { CloudinaryService } from './CloudinaryService.js';
 let PostService = class PostService {
-    constructor(postRepository, fileService) {
+    constructor(postRepository, fileService, cloudinaryService) {
         this.postRepository = postRepository;
         this.fileService = fileService;
+        this.cloudinaryService = cloudinaryService;
     }
     async createPost(postData) {
         const post = new Post(postData.title, postData.content, postData.category, postData.excerpt, postData.author, postData.status, postData.image);
@@ -25,7 +27,6 @@ let PostService = class PostService {
     }
     async updatePost(id, postData) {
         try {
-            // Önce mevcut postu al
             const currentPost = await this.postRepository.findById(id);
             if (!currentPost) {
                 throw new Error('Post bulunamadı');
@@ -33,20 +34,30 @@ let PostService = class PostService {
             // Eğer yeni bir resim yüklendiyse ve farklı bir resimse eski resmi sil
             if (postData.image?.url &&
                 currentPost.image?.url &&
-                postData.image.url !== currentPost.image.url) {
+                postData.image.url !== currentPost.image.url &&
+                currentPost.image.publicId) {
                 try {
-                    const oldFilename = this.fileService.extractFilenameFromUrl(currentPost.image.url);
-                    await this.fileService.deleteFile(oldFilename);
+                    await this.cloudinaryService.deleteImage(currentPost.image.publicId);
                 }
                 catch (error) {
-                    // Resim silme hatası güncellemeyi engellemeyecek
                     console.error('Eski resim silinirken hata:', error);
                 }
+            }
+            // Başlık değiştiyse yeni slug oluştur
+            if (postData.title && postData.title !== currentPost.title) {
+                const post = new Post(postData.title, currentPost.content, currentPost.category, currentPost.excerpt, currentPost.author);
+                postData.slug = post.createSlug(postData.title);
+                postData.searchableTitle = postData.title.toLowerCase();
             }
             // Güncellenecek veriyi hazırla
             const updateData = {
                 ...currentPost,
                 ...postData,
+                // Özel alanları koru
+                views: currentPost.views,
+                shareCount: currentPost.shareCount,
+                totalViewDuration: currentPost.totalViewDuration,
+                lastViewedAt: currentPost.lastViewedAt
             };
             // id, createdAt ve updatedAt alanlarını çıkar
             delete updateData.id;
@@ -66,9 +77,8 @@ let PostService = class PostService {
     }
     async deletePost(id) {
         const post = await this.postRepository.findById(id);
-        if (post?.image?.url) {
-            const filename = this.fileService.extractFilenameFromUrl(post.image.url);
-            await this.fileService.deleteFile(filename);
+        if (post?.image?.publicId) {
+            await this.cloudinaryService.deleteImage(post.image.publicId);
         }
         await this.postRepository.delete(id);
     }
@@ -102,12 +112,16 @@ let PostService = class PostService {
             hasPreviousPage: page > 1
         };
     }
-    async getPublishedPosts(page = 1, limit = 12) {
+    async getPublishedPosts(options) {
+        const { page = 1, limit = 12, category, search, sortBy = 'date-desc' } = options;
         const skip = (page - 1) * limit;
         const filters = { status: 'published' };
+        if (category) {
+            filters.category = category;
+        }
         const [posts, totalItems] = await Promise.all([
-            this.postRepository.findAllWithFilters(limit, skip, filters),
-            this.postRepository.count(filters)
+            this.postRepository.findAllWithFilters(limit, skip, filters, search, sortBy),
+            this.postRepository.count(filters, search)
         ]);
         const totalPages = Math.ceil(totalItems / limit);
         return {
@@ -135,12 +149,55 @@ let PostService = class PostService {
         const { items } = await this.postRepository.findAll(startIndex + 1);
         return items[startIndex]?.id;
     }
+    async getMostSharedPosts() {
+        const limit = 3; // En çok paylaşılan 3 postu getir
+        const page = 1;
+        const skip = 0;
+        const filters = { status: 'published' };
+        const [posts, totalItems] = await Promise.all([
+            this.postRepository.findAllWithFilters(limit, skip, filters, undefined, 'shareCount-desc'),
+            this.postRepository.count(filters)
+        ]);
+        return {
+            data: posts.items,
+            total: totalItems,
+            currentPage: page,
+            totalPages: Math.ceil(totalItems / limit),
+            hasNextPage: false,
+            hasPreviousPage: false
+        };
+    }
+    async incrementShareCount(id) {
+        const post = await this.postRepository.findById(id);
+        if (!post) {
+            throw new Error('Post bulunamadı');
+        }
+        const updateData = {
+            shareCount: (post.shareCount || 0) + 1
+        };
+        await this.postRepository.update(id, updateData);
+    }
+    async incrementViewCount(id) {
+        const post = await this.postRepository.findById(id);
+        if (!post) {
+            throw new Error('Post bulunamadı');
+        }
+        const updateData = {
+            views: (post.views || 0) + 1,
+            lastViewedAt: new Date()
+        };
+        await this.postRepository.update(id, updateData);
+    }
+    async getMostVisitedPost() {
+        return this.postRepository.getMostVisitedPost();
+    }
 };
 PostService = __decorate([
     injectable(),
-    __param(0, inject(PostRepository)),
+    __param(0, inject(TYPES.PostRepository)),
     __param(1, inject(FileService)),
-    __metadata("design:paramtypes", [PostRepository,
-        FileService])
+    __param(2, inject(TYPES.CloudinaryService)),
+    __metadata("design:paramtypes", [Object, FileService,
+        CloudinaryService])
 ], PostService);
 export { PostService };
