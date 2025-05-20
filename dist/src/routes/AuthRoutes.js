@@ -1,0 +1,14 @@
+import express from 'express';
+import { container } from '../inversify.config.js';
+import { AuthController } from '../controllers/AuthController.js';
+const authController = container.get(AuthController);
+const router = express.Router();
+router.post('/me', (req, res) => authController.me(req, res));
+router.post('/register', (req, res) => authController.registerUser(req, res));
+router.post('/login', (req, res) => authController.loginUser(req, res));
+router.post('/logout', (req, res) => authController.logoutUser(req, res));
+router.post('/role', (req, res) => authController.getUserRole(req, res));
+router.post('/forgot-password', (req, res) => authController.forgotPassword(req, res));
+router.post('/change-password', (req, res) => authController.changePassword(req, res));
+router.post('/verify-email', (req, res) => authController.verifyEmail(req, res));
+export default router;
