@@ -6,4 +6,7 @@ export const TYPES = {
   IContactRepository: Symbol.for('IContactRepository'),
   ContactService: Symbol.for('ContactService'),
   CloudinaryService: Symbol.for('CloudinaryService'),
+  CommentRepository: Symbol.for('CommentRepository'),
+  CommentService: Symbol.for('CommentService'),
+  CommentCollectionName: Symbol.for('CommentCollectionName'),
 } as const; 

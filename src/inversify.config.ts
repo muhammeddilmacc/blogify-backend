@@ -16,13 +16,15 @@ import { AboutController } from './controllers/AboutController';
 import { AboutService } from './services/AboutService';
 import { FileService } from './services/FileService';
 import { CloudinaryService } from './services/CloudinaryService';
+import { CommentService } from './services/CommentService';
+import { CommentRepository } from './repositories/CommentRepository';
+import { ICommentRepository } from './abstracts/interfaces/repositories/ICommentRepository';
 
 import { IContactRepository } from './abstracts/interfaces/repositories/IContactRepository';
 import { ContactRepository } from './repositories/ContactRepository';
 import { ContactService } from './services/ContactService';
 import { ContactController } from './controllers/ContactController';
 import { IPostRepository } from './abstracts/interfaces/repositories/IPostRepository';
-
 
 dotenv.config();
 
@@ -31,6 +33,7 @@ const container = new Container();
 // Firebase
 container.bind(TYPES.Firestore).toConstantValue(db);
 container.bind(TYPES.PostCollectionName).toConstantValue('posts');
+container.bind(TYPES.CommentCollectionName).toConstantValue('comments');
 
 container.bind<UserRepository>(UserRepository).toSelf();
 container.bind<UserService>(UserService).toSelf();
@@ -57,5 +60,9 @@ container.bind<ContactController>(ContactController).toSelf();
 
 // Cloudinary binding
 container.bind<CloudinaryService>(TYPES.CloudinaryService).to(CloudinaryService).inSingletonScope();
+
+// Comment bindings
+container.bind(TYPES.CommentRepository).to(CommentRepository);
+container.bind(CommentService).toSelf();
 
 export { container };

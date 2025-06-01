@@ -12,6 +12,7 @@ import userRoutes from './routes/UserRoutes';
 import postRoutes from './routes/PostRoutes';
 import aboutRoutes from './routes/AboutRoutes';
 import contactRoutes from './routes/ContactRoutes';
+import commentRoutes from './routes/CommentRoutes';
 
 import { errorHandler } from './middlewares/ErrorHandler';
 import { corsMiddleware } from './middlewares/corsMiddleware';
@@ -103,6 +104,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/posts', postRoutes);
 app.use('/api/about', aboutRoutes);
 app.use('/api/contact', contactRoutes);
+app.use('/api/comments', commentRoutes);
 
 app.use(errorHandler);
 
