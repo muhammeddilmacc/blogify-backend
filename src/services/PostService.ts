@@ -285,6 +285,61 @@ export class PostService {
   }
 
   async getMostVisitedPost(): Promise<Post | null> {
-    return this.postRepository.getMostVisitedPost();
+    const posts = await this.postRepository.findAllWithFilters(1, 0, { status: 'published' }, undefined, 'views-desc');
+    return posts.items[0] || null;
+  }
+
+  async likePost(postId: string, userId: string): Promise<void> {
+    try {
+      await this.postRepository.likePost(postId, userId);
+    } catch (error) {
+      if (error instanceof Error) {
+        throw new Error(`Beğeni işlemi başarısız: ${error.message}`);
+      }
+      throw new Error('Beğeni işlemi sırasında bir hata oluştu');
+    }
+  }
+
+  async unlikePost(postId: string, userId: string): Promise<void> {
+    try {
+      await this.postRepository.unlikePost(postId, userId);
+    } catch (error) {
+      if (error instanceof Error) {
+        throw new Error(`Beğeni kaldırma işlemi başarısız: ${error.message}`);
+      }
+      throw new Error('Beğeni kaldırma işlemi sırasında bir hata oluştu');
+    }
+  }
+
+  async isPostLikedByUser(postId: string, userId: string): Promise<boolean> {
+    try {
+      return await this.postRepository.isPostLikedByUser(postId, userId);
+    } catch (error) {
+      if (error instanceof Error) {
+        throw new Error(`Beğeni durumu kontrolü başarısız: ${error.message}`);
+      }
+      throw new Error('Beğeni durumu kontrolü sırasında bir hata oluştu');
+    }
+  }
+
+  async getMostLikedPosts(): Promise<PaginationResult<Post>> {
+    const limit = 3; // En çok beğenilen 3 postu getir
+    const page = 1;
+    const skip = 0;
+    const filters: Partial<Post> = { status: 'published' as PostStatus };
+
+    const [posts, totalItems] = await Promise.all([
+      this.postRepository.findAllWithFilters(limit, skip, filters, undefined, 'likes-desc'),
+      this.postRepository.count(filters)
+    ]);
+
+    return {
+      data: posts.items,
+      total: totalItems,
+      currentPage: page,
+      totalPages: Math.ceil(totalItems / limit),
+      hasNextPage: false,
+      hasPreviousPage: false
+    };
   }
 }

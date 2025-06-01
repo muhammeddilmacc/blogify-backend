@@ -24,6 +24,13 @@ export class Post {
   shareCount: number = 0;
 
   @IsNumber()
+  likes: number = 0;
+
+  @IsString({ each: true })
+  @IsOptional()
+  likedBy: string[] = [];
+
+  @IsNumber()
   totalViewDuration: number = 0; // saniye cinsinden
 
   @IsDate()
@@ -88,6 +95,8 @@ export class Post {
     this.date = date || new Date().toISOString();
     this.views = 0;
     this.shareCount = 0;
+    this.likes = 0;
+    this.likedBy = [];
     this.totalViewDuration = 0;
   }
 

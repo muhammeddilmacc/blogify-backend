@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { container } from '@/inversify.config';
 import { PostController } from '@/controllers/PostController';
 import { uploadMiddleware } from '@/middlewares/uploadMiddleware';
+import authenticate from '@/middlewares/AuthMiddleware';
 
 const router = Router();
 const postController = container.get<PostController>(PostController);
@@ -9,6 +10,7 @@ const postController = container.get<PostController>(PostController);
 // Özel route'lar
 router.get('/most-visited', (req, res) => postController.getMostVisitedPost(req, res));
 router.get('/most-shared', (req, res) => postController.getMostSharedPosts(req, res));
+router.get('/most-liked', (req, res) => postController.getMostLikedPosts(req, res));
 router.get('/published', postController.getPublishedPosts.bind(postController));
 
 // Resim yükleme endpoint'i
@@ -17,6 +19,11 @@ router.post('/upload', uploadMiddleware.single(), (req, res) => postController.u
 // CRUD işlemleri
 router.post('/create', (req, res) => postController.createPost(req, res));
 router.get('/', (req, res) => postController.getPosts(req, res));
+
+// Beğeni işlemleri
+router.post('/:id/like', authenticate, (req, res) => postController.likePost(req, res));
+router.post('/:id/unlike', authenticate, (req, res) => postController.unlikePost(req, res));
+router.get('/:id/is-liked', authenticate, (req, res) => postController.isPostLikedByUser(req, res));
 
 // Slug route'u ID route'larından önce
 router.get('/:slug', (req, res) => postController.getPostBySlug(req, res));

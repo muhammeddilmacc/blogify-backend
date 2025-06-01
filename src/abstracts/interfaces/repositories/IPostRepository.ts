@@ -21,4 +21,7 @@ export interface IPostRepository {
   getPublishedPosts(limit?: number, startAfterId?: string): Promise<{ items: Post[]; lastDoc: any }>;
   searchPosts(searchTerm: string): Promise<Post[]>;
   getMostVisitedPost(): Promise<Post | null>;
+  likePost(postId: string, userId: string): Promise<void>;
+  unlikePost(postId: string, userId: string): Promise<void>;
+  isPostLikedByUser(postId: string, userId: string): Promise<boolean>;
 }

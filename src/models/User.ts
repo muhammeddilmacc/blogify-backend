@@ -2,6 +2,17 @@ import { IsString, IsArray, IsEmail } from 'class-validator';
 import { Model } from './Model';
 import type { FieldValue } from 'firebase-admin/firestore';
 
+export interface User {
+  id: string;
+  email: string;
+  name: string;
+  role: string;
+  lastLoginAt: FieldValue;
+  uid: string;
+  createdAt: FieldValue;
+  updatedAt: FieldValue;
+}
+
 export class User extends Model {
   // only: name email
   @IsString()

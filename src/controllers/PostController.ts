@@ -259,4 +259,64 @@ export class PostController extends BaseController {
       this.handleError(error, res);
     }
   }
+
+  async likePost(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+      const userId = req.user?.id; // Kullanıcı ID'sini auth middleware'den alıyoruz
+
+      if (!userId) {
+        this.unauthorized(res, 'Bu işlem için giriş yapmanız gerekiyor');
+        return;
+      }
+
+      await this.postService.likePost(id, userId);
+      this.success(res, { message: 'Post başarıyla beğenildi' });
+    } catch (error) {
+      this.handleError(error, res);
+    }
+  }
+
+  async unlikePost(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+      const userId = req.user?.id; // Kullanıcı ID'sini auth middleware'den alıyoruz
+
+      if (!userId) {
+        this.unauthorized(res, 'Bu işlem için giriş yapmanız gerekiyor');
+        return;
+      }
+
+      await this.postService.unlikePost(id, userId);
+      this.success(res, { message: 'Post beğenisi başarıyla kaldırıldı' });
+    } catch (error) {
+      this.handleError(error, res);
+    }
+  }
+
+  async isPostLikedByUser(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+      const userId = req.user?.id; // Kullanıcı ID'sini auth middleware'den alıyoruz
+
+      if (!userId) {
+        this.unauthorized(res, 'Bu işlem için giriş yapmanız gerekiyor');
+        return;
+      }
+
+      const isLiked = await this.postService.isPostLikedByUser(id, userId);
+      this.success(res, { isLiked });
+    } catch (error) {
+      this.handleError(error, res);
+    }
+  }
+
+  async getMostLikedPosts(req: Request, res: Response): Promise<void> {
+    try {
+      const result = await this.postService.getMostLikedPosts();
+      this.success(res, result);
+    } catch (error) {
+      this.handleError(error, res);
+    }
+  }
 }

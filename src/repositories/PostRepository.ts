@@ -257,4 +257,60 @@ export class PostRepository
     if (snapshot.empty) return null;
     return this.mapDocToPost(snapshot.docs[0]);
   }
+
+  async likePost(postId: string, userId: string): Promise<void> {
+    const postRef = this.collection.doc(postId);
+    await this.db.runTransaction(async (transaction) => {
+      const postDoc = await transaction.get(postRef);
+      if (!postDoc.exists) {
+        throw new Error('Post bulunamadı');
+      }
+
+      const post = postDoc.data() as Post;
+      const likedBy = post.likedBy || [];
+
+      if (likedBy.includes(userId)) {
+        throw new Error('Post zaten beğenilmiş');
+      }
+
+      transaction.update(postRef, {
+        likes: FieldValue.increment(1),
+        likedBy: FieldValue.arrayUnion(userId),
+        updatedAt: FieldValue.serverTimestamp()
+      });
+    });
+  }
+
+  async unlikePost(postId: string, userId: string): Promise<void> {
+    const postRef = this.collection.doc(postId);
+    await this.db.runTransaction(async (transaction) => {
+      const postDoc = await transaction.get(postRef);
+      if (!postDoc.exists) {
+        throw new Error('Post bulunamadı');
+      }
+
+      const post = postDoc.data() as Post;
+      const likedBy = post.likedBy || [];
+
+      if (!likedBy.includes(userId)) {
+        throw new Error('Post zaten beğenilmemiş');
+      }
+
+      transaction.update(postRef, {
+        likes: FieldValue.increment(-1),
+        likedBy: FieldValue.arrayRemove(userId),
+        updatedAt: FieldValue.serverTimestamp()
+      });
+    });
+  }
+
+  async isPostLikedByUser(postId: string, userId: string): Promise<boolean> {
+    const postDoc = await this.collection.doc(postId).get();
+    if (!postDoc.exists) {
+      throw new Error('Post bulunamadı');
+    }
+
+    const post = postDoc.data() as Post;
+    return (post.likedBy || []).includes(userId);
+  }
 }
